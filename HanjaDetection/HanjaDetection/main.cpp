@@ -18,9 +18,89 @@ template<template<typename>class P = std::greater> struct compare_pair_second {
 class PATCH
 {
 public:
-	Rect cur;
-	Rect pre;
+	Rect src;
+	Rect dst;
 };
+
+
+//void seletedRowReordering()
+//{
+//	//4. 정렬
+//	cv::Mat targetImg = cv::Mat::zeros(cv::Size(src.cols, src.rows), dst.type());
+//	map<int, vector<Rect>> copyRoi;
+//	for (int j = /*sortedRoi.size() - 5*/0; j < sortedRoi.size(); j++)
+//	{
+//		int yH = 0;
+//		for (int i = 0; i < sortedRoi[j].size(); i++)
+//		{
+//			cv::Mat patch = dst(Rect(sortedRoi[j][i].x, sortedRoi[j][i].y, sortedRoi[j][i].width, sortedRoi[j][i].height));
+//			
+//			if (j == sortedRoi.size() - 5)
+//			{
+//				if (i < 1)
+//				{
+//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x - (src.cols / sizeC), yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
+//				}
+//				else
+//				{
+//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x, yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
+//				}
+//			}
+//			else if (j == sortedRoi.size() - 4)
+//			{
+//				if (i < 2)
+//				{
+//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x - (src.cols / sizeC), yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
+//				}
+//				else
+//				{
+//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x, yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
+//				}
+//			}
+//			else if (j == sortedRoi.size() - 3)
+//			{
+//				if (i < 3)
+//				{
+//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x - (src.cols / sizeC), yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
+//				}
+//				else
+//				{
+//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x, yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
+//				}
+//			}
+//			else if (j == sortedRoi.size() - 2)
+//			{
+//				if (i < 4)
+//				{
+//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x - (src.cols / sizeC), yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
+//				}
+//				else
+//				{
+//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x, yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
+//				}
+//			}
+//			else if (j == sortedRoi.size() - 1)
+//			{
+//				if (i < 5)
+//				{
+//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x - (src.cols / sizeC), yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
+//				}
+//				else
+//				{
+//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x, yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
+//				}
+//			}
+//			else
+//			{
+//				patch.copyTo(targetImg(Rect(sortedRoi[j][i].x, yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
+//			}
+//			
+//			yH += (src.rows / sizeR);//sortedRoi[j][i].height;
+//			//cv::imshow("Src", targetImg);
+//			//cv::waitKey();
+//		}
+//	}
+//}
 
 int main(void)
 {
@@ -163,10 +243,11 @@ int main(void)
 			order[i][j].height = total;
 
 			PATCH tPatch;
-			tPatch.cur = order[i][j];
+			tPatch.src = order[i][j];
+			tPatch.dst = order[i][j];
 
 			orderedPatch[i].push_back(tPatch);
-			/*cv::rectangle(dst, orderedPatch[i][j].cur, cv::Scalar(0, 0, 255));*/
+			/*cv::rectangle(dst, orderedPatch[i][j].src, cv::Scalar(0, 0, 255));*/
 		}
 	}
 
@@ -179,32 +260,43 @@ int main(void)
 		selete32.push_back(vec[i].first);
 	}
 
-	//for (int i = 0; i < orderedPatch.size(); i++)
-	//{
-	//	vector<int>::iterator it = std::find(selete32.begin(), selete32.end(), i);
-	//	if (it != selete32.end())
-	//	{
-
-	//	}
-
-	//	for (int j = 0; j < orderedPatch[i].size(); j++)
-	//	{
-	//		
-	//	}
-	//}
-
-	int limit = 800;
 	for (int i = 0; i < orderedPatch.size(); i++)
 	{
-		int si = orderedPatch[i][0].cur.height * orderedPatch[i].size();
+		vector<int>::iterator it = std::find(selete32.begin(), selete32.end(), i);
+		if (it != selete32.end())
+		{
+			for (int j = 0; j < orderedPatch[i].size(); j++)
+			{
+				if (j % (sizeR - 1) == 0 && j != 0)
+				{
+					for (int p = 0; p < orderedPatch.size(); p++)
+					{
+						for (int m = 0; m < orderedPatch[p].size(); m++)
+						{
+							int yH = (orderedPatch[p][m].dst.height * m);
+							orderedPatch[p][m].dst.x = orderedPatch[p][m].dst.x - (src.cols / sizeC);
+							orderedPatch[p][m].dst.y = yH;
+							orderedPatch[p][m].dst.width = orderedPatch[p][m].dst.width;
+							orderedPatch[p][m].dst.height = orderedPatch[p][m].dst.height;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	int limit = 1000;
+	for (int i = 0; i < orderedPatch.size(); i++)
+	{
+		int si = orderedPatch[i][0].src.height * orderedPatch[i].size();
 		int differ = (limit - si) / (int)orderedPatch[i].size();
 		for (int j = 0; j < orderedPatch[i].size(); j++)
 		{
-			int yHeight = orderedPatch[i][j].cur.height * j;
-			orderedPatch[i][j].cur.y = yHeight + (differ * j);
-			orderedPatch[i][j].cur.height = orderedPatch[i][j].cur.height;
+			int yHeight = orderedPatch[i][j].src.height * j;
+			orderedPatch[i][j].src.y = yHeight + (differ * j);
+			orderedPatch[i][j].src.height = orderedPatch[i][j].src.height;
 
-			cv::rectangle(dst, orderedPatch[i][j].cur, cv::Scalar(0, 0, 255));
+			cv::rectangle(dst, orderedPatch[i][j].src, cv::Scalar(0, 0, 255));
 			//cv::imshow("Src", dst);
 			//cv::waitKey();
 		}
@@ -214,84 +306,11 @@ int main(void)
 	cv::imshow("Src", dst);
 	cv::waitKey();
 
-#if 1
-	cv::imwrite("dst.jpg", dst);
+#if _NDEBUG
+	vector<int> compression_params;
+	compression_params.push_back(IMWRITE_JPEG_QUALITY);
+	compression_params.push_back(100);
+	cv::imwrite("dst.jpg", dst, compression_params);
 #endif
 	return 0;
 }
-
-////4. 정렬
-//cv::Mat targetImg = cv::Mat::zeros(cv::Size(src.cols, src.rows), dst.type());
-//map<int, vector<Rect>> copyRoi;
-//for (int j = /*sortedRoi.size() - 5*/0; j < sortedRoi.size(); j++)
-//{
-//	int yH = 0;
-//	for (int i = 0; i < sortedRoi[j].size(); i++)
-//	{
-//		cv::Mat patch = dst(Rect(sortedRoi[j][i].x, sortedRoi[j][i].y, sortedRoi[j][i].width, sortedRoi[j][i].height));
-//		
-//		if (j == sortedRoi.size() - 5)
-//		{
-//			if (i < 1)
-//			{
-//				patch.copyTo(targetImg(Rect(sortedRoi[j][i].x - (src.cols / sizeC), yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//			}
-//			else
-//			{
-//				patch.copyTo(targetImg(Rect(sortedRoi[j][i].x, yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//			}
-//		}
-//		else if (j == sortedRoi.size() - 4)
-//		{
-//			if (i < 2)
-//			{
-//				patch.copyTo(targetImg(Rect(sortedRoi[j][i].x - (src.cols / sizeC), yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//			}
-//			else
-//			{
-//				patch.copyTo(targetImg(Rect(sortedRoi[j][i].x, yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//			}
-//		}
-//		else if (j == sortedRoi.size() - 3)
-//		{
-//			if (i < 3)
-//			{
-//				patch.copyTo(targetImg(Rect(sortedRoi[j][i].x - (src.cols / sizeC), yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//			}
-//			else
-//			{
-//				patch.copyTo(targetImg(Rect(sortedRoi[j][i].x, yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//			}
-//		}
-//		else if (j == sortedRoi.size() - 2)
-//		{
-//			if (i < 4)
-//			{
-//				patch.copyTo(targetImg(Rect(sortedRoi[j][i].x - (src.cols / sizeC), yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//			}
-//			else
-//			{
-//				patch.copyTo(targetImg(Rect(sortedRoi[j][i].x, yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//			}
-//		}
-//		else if (j == sortedRoi.size() - 1)
-//		{
-//			if (i < 5)
-//			{
-//				patch.copyTo(targetImg(Rect(sortedRoi[j][i].x - (src.cols / sizeC), yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//			}
-//			else
-//			{
-//				patch.copyTo(targetImg(Rect(sortedRoi[j][i].x, yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//			}
-//		}
-//		else
-//		{
-//			patch.copyTo(targetImg(Rect(sortedRoi[j][i].x, yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//		}
-//		
-//		yH += (src.rows / sizeR);//sortedRoi[j][i].height;
-//		//cv::imshow("Src", targetImg);
-//		//cv::waitKey();
-//	}
-//}
