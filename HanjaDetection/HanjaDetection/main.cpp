@@ -269,9 +269,9 @@ int main(void)
 			{
 				if (j % (sizeR - 1) == 0 && j != 0)
 				{
-					for (int p = 0; p < orderedPatch.size(); p++)
+					for (int p = i; p < orderedPatch.size(); p++)
 					{
-						for (int m = 0; m < orderedPatch[p].size(); m++)
+						for (int m = j; m < orderedPatch[p].size(); m++)
 						{
 							int yH = (orderedPatch[p][m].dst.height * m);
 							orderedPatch[p][m].dst.x = orderedPatch[p][m].dst.x - (src.cols / sizeC);
