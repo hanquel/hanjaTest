@@ -20,87 +20,10 @@ class PATCH
 public:
 	Rect src;
 	Rect dst;
+
+	bool alive;
+	int index;
 };
-
-
-//void seletedRowReordering()
-//{
-//	//4. 정렬
-//	cv::Mat targetImg = cv::Mat::zeros(cv::Size(src.cols, src.rows), dst.type());
-//	map<int, vector<Rect>> copyRoi;
-//	for (int j = /*sortedRoi.size() - 5*/0; j < sortedRoi.size(); j++)
-//	{
-//		int yH = 0;
-//		for (int i = 0; i < sortedRoi[j].size(); i++)
-//		{
-//			cv::Mat patch = dst(Rect(sortedRoi[j][i].x, sortedRoi[j][i].y, sortedRoi[j][i].width, sortedRoi[j][i].height));
-//			
-//			if (j == sortedRoi.size() - 5)
-//			{
-//				if (i < 1)
-//				{
-//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x - (src.cols / sizeC), yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//				}
-//				else
-//				{
-//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x, yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//				}
-//			}
-//			else if (j == sortedRoi.size() - 4)
-//			{
-//				if (i < 2)
-//				{
-//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x - (src.cols / sizeC), yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//				}
-//				else
-//				{
-//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x, yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//				}
-//			}
-//			else if (j == sortedRoi.size() - 3)
-//			{
-//				if (i < 3)
-//				{
-//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x - (src.cols / sizeC), yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//				}
-//				else
-//				{
-//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x, yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//				}
-//			}
-//			else if (j == sortedRoi.size() - 2)
-//			{
-//				if (i < 4)
-//				{
-//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x - (src.cols / sizeC), yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//				}
-//				else
-//				{
-//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x, yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//				}
-//			}
-//			else if (j == sortedRoi.size() - 1)
-//			{
-//				if (i < 5)
-//				{
-//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x - (src.cols / sizeC), yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//				}
-//				else
-//				{
-//					patch.copyTo(targetImg(Rect(sortedRoi[j][i].x, yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//				}
-//			}
-//			else
-//			{
-//				patch.copyTo(targetImg(Rect(sortedRoi[j][i].x, yH, sortedRoi[j][i].width, sortedRoi[j][i].height)));
-//			}
-//			
-//			yH += (src.rows / sizeR);//sortedRoi[j][i].height;
-//			//cv::imshow("Src", targetImg);
-//			//cv::waitKey();
-//		}
-//	}
-//}
 
 int main(void)
 {
@@ -116,7 +39,8 @@ int main(void)
 
 	int sizeR = 33;
 	int sizeC = 28;
-	int margin = 2;
+	//int margin = 2;
+	int margin = 0;
 
 	float rowAddWeight = 0.26f;
 
@@ -180,8 +104,33 @@ int main(void)
 					}
 				}
 			}
+			int x1 = x + minX - margin;
+			int x2 = x + maxX + (margin * 2);
+			int y1 = y + minY - margin;
+			int y2 = y + maxY + (margin * 2);
 
-			Rect patchSize(cv::Point(x + minX - margin, y + minY - margin), cv::Point(x + maxX + (margin * 2), y + maxY + (margin * 2)));
+			//if (x1 < 0)
+			//{
+			//	x1 = 0;
+			//}
+
+			//if (y1 < 0)
+			//{
+			//	y1 = 0;
+			//}
+
+
+			//if (x2 > patch.rows - 1)
+			//{
+			//	x2 = patch.rows - 1;
+			//}
+
+			//if (y2 > patch.cols - 1)
+			//{
+			//	y2 = patch.cols - 1;
+			//}
+
+			Rect patchSize(cv::Point(x1, y1), cv::Point(x2, y2));
 
 			if (minX == 10000)
 			{
@@ -213,6 +162,7 @@ int main(void)
 		}
 	}
 
+	counter = 0;
 	std::map<int, int> totalSize;
 	map<int, vector<PATCH>> orderedPatch;
 
@@ -241,68 +191,180 @@ int main(void)
 
 			order[i][j].y = center - (total / 2);
 			order[i][j].height = total;
-
+			
 			PATCH tPatch;
 			tPatch.src = order[i][j];
 			tPatch.dst = order[i][j];
+			tPatch.alive = true;
+			tPatch.index = counter++;
 
 			orderedPatch[i].push_back(tPatch);
-			/*cv::rectangle(dst, orderedPatch[i][j].src, cv::Scalar(0, 0, 255));*/
 		}
 	}
 
 	std::vector<std::pair<int, int>>vec(totalSize.begin(), totalSize.end());
 	std::sort(vec.begin(), vec.end(), compare_pair_second<std::greater>());
 
-	vector<int> selete32;
-	for (int i = 0; i < 6; i++)
+	vector<int> tselete32;
+	for (int i = 0; i < 12; i++)
 	{
-		selete32.push_back(vec[i].first);
+		tselete32.push_back(vec[i].first);
 	}
 
+	std::sort(tselete32.begin(), tselete32.end());
+
+	vector<int> selete32;
+	for (int i = 0; i < 12; i += 2)
+	{
+		selete32.push_back(tselete32[i]);
+	}
+
+	std::sort(selete32.begin(), selete32.end());
+
+	counter = 0;
+	cv::Mat target = cv::Mat::zeros(dst.rows, dst.cols, dst.type());
+	target = cv::Scalar(255, 255, 255);
+	//map<int, vector<Rect>> reOrderData;
 	for (int i = 0; i < orderedPatch.size(); i++)
 	{
 		vector<int>::iterator it = std::find(selete32.begin(), selete32.end(), i);
-		if (it != selete32.end())
+		if (it != selete32.end()) // 선택된것중 하나면
 		{
-			for (int j = 0; j < orderedPatch[i].size(); j++)
-			{
-				if (j % (sizeR - 1) == 0 && j != 0)
+#if 0
+			for (int j = 0; j < orderedPatch[i].size(); j++) // 32 번째로 정렬
+			{				
+				if (j % (sizeR - 1) == 0 && j != 0) // 33 번째 문자일 떄
 				{
-					for (int p = i; p < orderedPatch.size(); p++)
+					for (int p = i + 1; p < orderedPatch.size(); p++) // 다음칸부터
 					{
-						for (int m = j; m < orderedPatch[p].size(); m++)
+						Rect tOrderRect = Rect(	// 현재 마지막 칸을 다음 첫번쨰로 옮김
+							orderedPatch[p - 1][orderedPatch[p].size() - 1].dst.x - (src.cols / sizeC),
+							0,
+							orderedPatch[p - 1][orderedPatch[p].size() - 1].dst.width,
+							orderedPatch[p - 1][orderedPatch[p].size() - 1].dst.height);
+						//reOrderData[p].push_back(tOrderRect);
+						//orderedPatch[p - 1][orderedPatch[p].size() - 1].dst = tOrderRect;
+
+						//cv::Mat patch = dst(orderedPatch[p - 1][orderedPatch[p].size() - 1].src);
+						//patch.copyTo(target(tOrderRect));
+						//cv::rectangle(target, tOrderRect, cv::Scalar(255, 0, 255));
+						//cv::imshow("target", target);
+						//cv::imshow("dst", dst);
+						//cv::waitKey();
+
+						for (int m = 1; m < orderedPatch[p].size(); m++) // 다음줄부터
 						{
-							int yH = (orderedPatch[p][m].dst.height * m);
-							orderedPatch[p][m].dst.x = orderedPatch[p][m].dst.x - (src.cols / sizeC);
-							orderedPatch[p][m].dst.y = yH;
-							orderedPatch[p][m].dst.width = orderedPatch[p][m].dst.width;
-							orderedPatch[p][m].dst.height = orderedPatch[p][m].dst.height;
+							int yH = (orderedPatch[p][m].dst.height * (m - 1));
+							Rect tOrderRect = Rect(	// 첫번쨰 놈을 한칸씩 미룸
+								orderedPatch[p][m - 1].dst.x,
+								orderedPatch[p - 1][orderedPatch[p].size() - 1].dst.height + yH,
+								orderedPatch[p][m - 1].dst.width,
+								orderedPatch[p][m - 1].dst.height);
+							//reOrderData[p].push_back(tOrderRect);
+
+							//orderedPatch[p][m - 1].dst = tOrderRect;
+
+							//patch = dst(orderedPatch[p][m - 1].src);
+							//patch.copyTo(target(tOrderRect));
+
+							//cv::rectangle(target, tOrderRect, cv::Scalar(255, 0, 255));
+							//cv::imshow("target", target);
+							//cv::imshow("dst", dst);
+							//cv::waitKey();
 						}
 					}
 				}
+				else
+				{
+					int yH = orderedPatch[i][j].dst.height * j;
+					Rect tOrderRect = Rect(	
+						orderedPatch[i][j].dst.x,
+						yH,
+						orderedPatch[i][j].dst.width,
+						orderedPatch[i][j].dst.height);
+
+					//orderedPatch[i][j].dst = tOrderRect;
+					//reOrderData[i].push_back(tOrderRectt);
+
+					//cv::Mat patch = dst(orderedPatch[i][j].src);
+					//patch.copyTo(target(tOrderRect));
+
+					//cv::rectangle(target, tOrderRect, cv::Scalar(26, 0, 255));
+					//cv::imshow("target", target);
+					//cv::imshow("dst", dst);
+					//cv::waitKey();
+				}
+			}
+#endif
+			counter++;
+		}
+		else
+		{
+			//for (int j = 0; j < counter; j++)
+			//{
+			//	Rect tOrderRect = Rect(
+			//		orderedPatch[i - 1][orderedPatch[i - 1].size() - counter].dst.x,
+			//		orderedPatch[i - 1][0].dst.height * (counter - 1),
+			//		orderedPatch[i - 1][orderedPatch[i - 1].size() - counter].dst.width,
+			//		orderedPatch[i - 1][orderedPatch[i - 1].size() - counter].dst.height);
+
+			//	cv::Mat patch = dst(orderedPatch[i][j].src);
+			//	patch.copyTo(target(tOrderRect));
+
+			//	cv::rectangle(target, tOrderRect, cv::Scalar(255, 0, 0));
+			//	cv::imshow("target", target);
+			//	cv::imshow("dst", dst);
+			//	cv::waitKey();
+			//}
+			//
+			for (int j = 0; j < orderedPatch[i].size() - counter; j++)
+			{
+				int yH = orderedPatch[i][j].dst.height * j + (orderedPatch[i - 1][0].dst.height * counter);
+				Rect tOrderRect = Rect(
+					orderedPatch[i][j].dst.x,
+					yH,
+					orderedPatch[i][j].dst.width,
+					orderedPatch[i][j].dst.height);
+
+				//orderedPatch[i][j].dst = tOrderRect;
+				//reOrderData[i].push_back(tOrderRect);
+
+				cv::Mat patch = dst(orderedPatch[i][j].src);
+				patch.copyTo(target(tOrderRect));
+
+				cv::rectangle(target, tOrderRect, cv::Scalar(255, 0, 0));
 			}
 		}
-	}
-
-	int limit = 1000;
-	for (int i = 0; i < orderedPatch.size(); i++)
-	{
-		int si = orderedPatch[i][0].src.height * orderedPatch[i].size();
-		int differ = (limit - si) / (int)orderedPatch[i].size();
-		for (int j = 0; j < orderedPatch[i].size(); j++)
-		{
-			int yHeight = orderedPatch[i][j].src.height * j;
-			orderedPatch[i][j].src.y = yHeight + (differ * j);
-			orderedPatch[i][j].src.height = orderedPatch[i][j].src.height;
-
-			cv::rectangle(dst, orderedPatch[i][j].src, cv::Scalar(0, 0, 255));
-			//cv::imshow("Src", dst);
-			//cv::waitKey();
-		}
+		cv::imshow("target", target);
+		cv::imshow("dst", dst);
+		cv::waitKey();
 	}
 
 
+	//int limit = 650;
+	//for (int i = 0; i < orderedPatch.size(); i++)
+	//{
+	//	int si = orderedPatch[i][0].src.height * orderedPatch[i].size();
+	//	int differ = (limit - si) / (int)orderedPatch[i].size();
+	//	for (int j = 0; j < orderedPatch[i].size(); j++)
+	//	{
+	//		if (orderedPatch[i][j].alive)
+	//		{
+	//			int yHeight = orderedPatch[i][j].src.height * j;
+	//			orderedPatch[i][j].src.y = yHeight + (differ * j);
+	//			orderedPatch[i][j].src.height = orderedPatch[i][j].src.height;
+
+	//			//cv::putText(target, to_string(orderedPatch[i][j].index), orderedPatch[i][j].dst.tl(), 1, 0.5, cv::Scalar(0, 255, 0));
+	//			cv::rectangle(target, orderedPatch[i][j].src, cv::Scalar(0, 0, 255));
+	//		}
+
+	//		//cv::imshow("target", target);
+	//		//cv::waitKey();
+	//	}
+	//}
+
+
+ 	cv::imshow("target", target);
 	cv::imshow("Src", dst);
 	cv::waitKey();
 
