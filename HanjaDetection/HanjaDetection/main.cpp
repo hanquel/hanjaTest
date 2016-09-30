@@ -1,10 +1,12 @@
-﻿#include <map>
+﻿#pragma once
+
+#include "헤더.h"
+#include <map>
 #include <iostream>
 #include <functional>
-#include <opencv2/core/mat.hpp>  
-#include <opencv2/imgcodecs.hpp>  
-#include <opencv2/imgproc.hpp> 
-#include <opencv2/highgui.hpp>  
+#include "Patch.h"
+
+#define TEST 0
 
 using namespace std;
 using namespace cv;
@@ -15,16 +17,18 @@ template<template<typename>class P = std::greater> struct compare_pair_second {
 	}
 };
 
-class PATCH
+Rect findCharSizeFromROI(cv::Mat patch, cv::Rect rect, int x, int y, int cols, int rows, int margin);
+
+void getSplitedROI(vector<Rect> &roi, cv::Mat img, int sizeR, int sizeC, int margin, int rowWeight, int colWeight);
+
+void setRowBasedOrder(map<int, vector<Rect>> &rowBased, vector<Rect> roi, int rows, int cols)
 {
-public:
-	Rect src;
-	Rect dst;
 
-	bool alive;
-	int index;
-};
+}
 
+void checkBoundary(int &x1, int &x2, int &y1, int &y2, int cols, int rows);
+
+// 5645*4815
 int main(void)
 {
 	cv::Mat src = cv::imread("1.jpg", IMREAD_GRAYSCALE);
@@ -32,34 +36,38 @@ int main(void)
 
 	cv::threshold(src, src, 127, 255, CV_THRESH_BINARY);
 
-	float divide = 1;
+	//float divide = 1;
 
-	cv::resize(src, src, cv::Size(src.cols / divide, src.rows / divide));
-	cv::resize(dst, dst, cv::Size(dst.cols / divide, dst.rows / divide));
+	//cv::resize(src, src, cv::Size(src.cols / divide, src.rows / divide));
+	//cv::resize(dst, dst, cv::Size(dst.cols / divide, dst.rows / divide));
+
+	cv::Mat target = cv::Mat::zeros(4815, 5645, dst.type());
+	target = cv::Scalar(255, 255, 255);
 
 	int sizeR = 33;
 	int sizeC = 28;
-	int margin = 2;
+	int margin = 10;
 
-	float rowAddWeight = 0.26f;
+	float rowWeight = 0.26f;
+	float colWeight = 0.0f;
 
-	Rect temp;
 	vector<Rect> roi;
+	Rect standard;
+	//getSplitedROI(roi, src, sizeR, sizeC, margin, rowWeight, colWeight);
 
 	for (int i = 0; i < sizeR; i++)
 	{
 		for (int j = 0; j < sizeC; j++)
 		{
-			int x = src.cols / sizeC * j;
-			int y = src.rows / sizeR * i + (i * rowAddWeight);
-			Rect temp(x, y, src.cols / sizeC, src.rows / sizeR);
+			int x = src.cols / sizeC * j + (j * colWeight);
+			int y = src.rows / sizeR * i + (i * rowWeight);
+			standard = Rect(x, y, src.cols / sizeC, src.rows / sizeR);
 
-			int minX = 10000;
-			int minY = 10000;
-			int maxX = -10000;
-			int maxY = -10000;
-
-			cv::Mat patch = src(temp);
+			cv::Mat patch = src(standard);
+			int minX = 10000000;
+			int minY = 10000000;
+			int maxX = -10000000;
+			int maxY = -10000000;
 
 			for (int m = 0; m < patch.rows; m++)
 			{
@@ -90,41 +98,26 @@ int main(void)
 					}
 				}
 			}
+
 			int x1 = x + minX - margin;
-			int x2 = x + maxX + (margin * 2);
+			int x2 = x + maxX + margin;
 			int y1 = y + minY - margin;
-			int y2 = y + maxY + (margin * 2);
+			int y2 = y + maxY + margin;
 
-			if (x1 < 0)
-			{
-				x1 = 0;
-			}
-
-			if (y1 < 0)
-			{
-				y1 = 0;
-			}
-
-			if (x2 > src.cols - 1)
-			{
-				x2 = src.cols - 1;
-			}
-
-			if (y2 > src.rows - 1)
-			{
-				y2 = src.rows - 1;
-			}
+			checkBoundary(x1, x2, y1, y2, sizeC, sizeR);
 
 			Rect patchSize(cv::Point(x1, y1), cv::Point(x2, y2));
 
-			if (minX == 10000)
+			if (minX == 1000000)
 			{
-				patchSize = temp;
+				patchSize = standard;
 			}
 
+			//Rect t = Rect(findCharSizeFromROI(src(standard), standard, x, y, src.cols, src.rows, margin));
 			roi.push_back(patchSize);
 		}
 	}
+
 
 	int counter = 0;
 	int indexer = 0;
@@ -141,6 +134,13 @@ int main(void)
 				counter++;
 			}
 
+#if 0
+			if (src(roi[index]).at<unsigned char>(0, 0) == 0)
+			{
+				continue;
+			}
+#endif
+
 			order[counter].push_back(roi[index]);
 
 			indexer++;
@@ -149,7 +149,7 @@ int main(void)
 
 	counter = 0;
 	std::map<int, int> totalSize;
-	map<int, vector<PATCH>> orderedPatch;
+	map<int, vector<Rect>> orderedPatch;
 
 	for (int i = 0; i < order.size(); i++)
 	{
@@ -157,16 +157,16 @@ int main(void)
 		int total = 0;
 		for (int j = 0; j < order[i].size(); j++)
 		{
-			if (order[i][j].width == (src.cols / sizeC) &&
-				order[i][j].height == (src.rows / sizeR))
-			{
-				blank++;
-				continue;
-			}
+			//if (order[i][j].width == (src.cols / sizeC) &&
+			//	order[i][j].height == (src.rows / sizeR))
+			//{
+			//	blank++;
+			//	continue;
+			//}
 			total += order[i][j].height;
 		}
 		totalSize[i] = total;
-		total /= (order[i].size() - blank);
+		total /= (order[i].size() /*- blank*/);
 
 		for (int j = 0; j < order[i].size(); j++)
 		{
@@ -177,13 +177,7 @@ int main(void)
 			order[i][j].y = center - (total / 2);
 			order[i][j].height = total;
 			
-			PATCH tPatch;
-			tPatch.src = order[i][j];
-			tPatch.dst = order[i][j];
-			tPatch.alive = true;
-			tPatch.index = counter++;
-
-			orderedPatch[i].push_back(tPatch);
+			orderedPatch[i].push_back(order[i][j]);
 		}
 	}
 
@@ -207,8 +201,7 @@ int main(void)
 	std::sort(selete32.begin(), selete32.end());
 
 	counter = 0;
-	cv::Mat target = cv::Mat::zeros(dst.rows, dst.cols, dst.type());
-	target = cv::Scalar(255, 255, 255);
+
 	map<int, vector<PATCH>> reOrderData;
 	for (int i = 0; i < orderedPatch.size(); i++)
 	{
@@ -218,26 +211,27 @@ int main(void)
 		{
 			for (int j = 0; j < counter; j++)
 			{
-				int yH = orderedPatch[i - 1][0].dst.height * j;
+				int yH = orderedPatch[i - 1][0].height * j;
 				Rect tOrderRect = Rect(
-					orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].dst.x - (src.cols / sizeC),
+					orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].x - (src.cols / sizeC),
 					yH,
-					orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].dst.width,
-					orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].dst.height);
+					orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].width,
+					orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].height);
 
-				//cv::Mat patch = dst(orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].src);
-				//patch.copyTo(target(tOrderRect));
+#if TEST
+				cv::Mat patch = dst(orderdPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].src);
+				patch.copyTo(target(tOrderRect));
+				cv::putText(target, std::to_string(indexer++), tOrderRect.tl(), 1, 1, cv::Scalar(255, 220, 70));
+				cv::rectangle(target, tOrderRect, cv::Scalar(0, 0, 255));
+				cv::imshow("target", target);
+				cv::imshow("dst", dst);
+				cv::waitKey();
+#endif
 
 				PATCH t;
-				t.src = orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].src;
+				t.src = orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)];
 				t.dst = tOrderRect;
 				reOrderData[i].push_back(t);
-
-				//cv::putText(target, std::to_string(indexer++), tOrderRect.tl(), 1, 1, cv::Scalar(255, 220, 70));
-				//cv::rectangle(target, tOrderRect, cv::Scalar(0, 0, 255));
-				//cv::imshow("target", target);
-				//cv::imshow("dst", dst);
-				//cv::waitKey();
 			}
 
 			for (int j = 0; j < orderedPatch[i].size() - counter; j++)
@@ -247,27 +241,27 @@ int main(void)
 					continue;
 				}
 
-				int yH = orderedPatch[i][j].dst.height * j + (orderedPatch[i][0].dst.height * counter);
+				int yH = orderedPatch[i][j].height * j + (orderedPatch[i][0].height * counter);
 				Rect tOrderRect = Rect(
-					orderedPatch[i][j].dst.x,
+					orderedPatch[i][j].x,
 					yH,
-					orderedPatch[i][j].dst.width,
-					orderedPatch[i][j].dst.height);
+					orderedPatch[i][j].width,
+					orderedPatch[i][j].height);
 
-				//cv::Mat patch = dst(orderedPatch[i][j].src);
-				//patch.copyTo(target(tOrderRect));
+#if TEST
+				cv::Mat patch = dst(orderedPatch[i][j].src);
+				patch.copyTo(target(tOrderRect));
+				cv::putText(target, std::to_string(indexer++), tOrderRect.tl(), 1, 1, cv::Scalar(255, 220, 0));
+				cv::rectangle(target, tOrderRect, cv::Scalar(0, 0, 255));
+				cv::imshow("target", target);
+				cv::imshow("dst", dst);
+				cv::waitKey();
+#endif
 
-				//reOrderData[i].push_back(tOrderRect);
 				PATCH t;
-				t.src = orderedPatch[i][j].src;
+				t.src = orderedPatch[i][j];
 				t.dst = tOrderRect;
 				reOrderData[i].push_back(t);
-
-				//cv::putText(target, std::to_string(indexer++), tOrderRect.tl(), 1, 1, cv::Scalar(255, 220, 0));
-				//cv::rectangle(target, tOrderRect, cv::Scalar(0, 0, 255));
-				//cv::imshow("target", target);
-				//cv::imshow("dst", dst);
-				//cv::waitKey();
 			}
 			counter++;
 		}
@@ -275,61 +269,59 @@ int main(void)
 		{
 			for (int j = 0; j < counter; j++)
 			{
-				int yH = orderedPatch[i - 1][0].dst.height * j;
+				int yH = orderedPatch[i - 1][0].height * j;
 				Rect tOrderRect = Rect(
-					orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].dst.x - (src.cols / sizeC),
+					orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].x - (src.cols / sizeC),
 					yH,
-					orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].dst.width,
-					orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].dst.height);
+					orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].width,
+					orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].height);
 
-				//cv::Mat patch = dst(orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].src);
-				//patch.copyTo(target(tOrderRect));
+#if TEST
+				cv::Mat patch = dst(orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].src);
+				patch.copyTo(target(tOrderRect));
+				cv::putText(target, std::to_string(indexer++), tOrderRect.tl(), 1, 1, cv::Scalar(255, 220, 0));
+				cv::rectangle(target, tOrderRect, cv::Scalar(255, 0, 0));
+				cv::imshow("target", target);
+				cv::imshow("dst", dst);
+				cv::waitKey();
+#endif
 
-				//reOrderData[i].push_back(tOrderRect);
 				PATCH t;
-				t.src = orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].src;
+				t.src = orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)];
 				t.dst = tOrderRect;
 				reOrderData[i].push_back(t);
-
-				//cv::putText(target, std::to_string(indexer++), tOrderRect.tl(), 1, 1, cv::Scalar(255, 220, 0));
-				//cv::rectangle(target, tOrderRect, cv::Scalar(255, 0, 0));
-				//cv::imshow("target", target);
-				//cv::imshow("dst", dst);
-				//cv::waitKey();
 			}
 			
 			for (int j = 0; j < orderedPatch[i].size() - counter; j++)
 			{
-				int yH = orderedPatch[i][j].dst.height * j + (orderedPatch[i - 1][0].dst.height * counter);
+				int yH = orderedPatch[i][j].height * j + (orderedPatch[i - 1][0].height * counter);
 				Rect tOrderRect = Rect(
-					orderedPatch[i][j].dst.x,
+					orderedPatch[i][j].x,
 					yH,
-					orderedPatch[i][j].dst.width,
-					orderedPatch[i][j].dst.height);
+					orderedPatch[i][j].width,
+					orderedPatch[i][j].height);
 
-				//cv::Mat patch = dst(orderedPatch[i][j].src);
-				//patch.copyTo(target(tOrderRect));
+#if TEST
+				cv::Mat patch = dst(orderedPatch[i][j].src);
+				patch.copyTo(target(tOrderRect));
 
-				//reOrderData[i].push_back(tOrderRect);
+				cv::putText(target, std::to_string(indexer++), tOrderRect.tl(), 1, 1, cv::Scalar(255, 220, 0));
+				cv::rectangle(target, tOrderRect, cv::Scalar(255, 0, 0));
+				cv::imshow("target", target);
+				cv::imshow("dst", dst);
+				cv::waitKey();
+#endif
+
 				PATCH t;
-				t.src = orderedPatch[i][j].src;
+				t.src = orderedPatch[i][j];
 				t.dst = tOrderRect;
 				reOrderData[i].push_back(t);
-
-				//cv::putText(target, std::to_string(indexer++), tOrderRect.tl(), 1, 1, cv::Scalar(255, 220, 0));
-				//cv::rectangle(target, tOrderRect, cv::Scalar(255, 0, 0));
-				//cv::imshow("target", target);
-				//cv::imshow("dst", dst);
-				//cv::waitKey();
 			}
 		}
-		//cv::imshow("target", target);
-		//cv::imshow("dst", dst);
-		//cv::waitKey();
 	}
 
 
-	int limit = 800;
+	int limit = 1000;
 	for (int i = 0; i < reOrderData.size(); i++)
 	{
 		int total = 0;
@@ -337,20 +329,86 @@ int main(void)
 		{
 			total += reOrderData[i][j].dst.height;
 		}
+
+		indexer = -1;
 		int differ = (limit - total) / (int)reOrderData[i].size();
 		for (int j = 0; j < reOrderData[i].size(); j++)
 		{
+			indexer++;
 			int yHeight = reOrderData[i][j].dst.height * j;
 			reOrderData[i][j].dst.y = yHeight + (differ * j);
+			//reOrderData[i][j].dst.height = (reOrderData[i][j].dst.y + reOrderData[i][j].dst.height)- (differ * j);
 
-			//cv::putText(target, to_string(orderedPatch[i][j].index), orderedPatch[i][j].dst.tl(), 1, 0.5, cv::Scalar(0, 255, 0));
+			if (reOrderData[i][j].dst.y < 0)
+			{
+				reOrderData[i][j].dst.y = 0;
+			}
 
-			cv::Mat patch = dst(reOrderData[i][j].src);
+			if (reOrderData[i][j].dst.x < 0)
+			{
+				reOrderData[i][j].dst.x = 0;
+			}
+
+#if 1
+			if (reOrderData[i][j].dst.x + reOrderData[i][j].dst.width > src.cols - 1)
+			{
+				int differW = (src.cols - 1) - (reOrderData[i][j].dst.x + reOrderData[i][j].dst.width);
+				reOrderData[i][j].src.width += differW;
+				reOrderData[i][j].dst.width += differW;
+			}
+
+			if (reOrderData[i][j].dst.y + reOrderData[i][j].dst.height > src.rows - 1)
+			{
+				int differH = (src.rows - 1) - (reOrderData[i][j].dst.y + reOrderData[i][j].dst.height);
+				reOrderData[i][j].src.height += differH;
+				reOrderData[i][j].dst.height += differH;
+			}
+#endif
+
+			if (reOrderData[i][j].src.y < 0)
+			{
+				reOrderData[i][j].src.y = 0;
+			}
+
+			if (reOrderData[i][j].src.x < 0)
+			{
+				reOrderData[i][j].src.x = 0;
+			}
+
+			if (reOrderData[i][j].src.x + reOrderData[i][j].src.width > src.cols - 1)
+			{
+				int differW = (src.cols - 1) - (reOrderData[i][j].src.x + reOrderData[i][j].src.width);
+				reOrderData[i][j].src.width += differW;
+				reOrderData[i][j].dst.width += differW;
+			}
+
+			if (reOrderData[i][j].src.y + reOrderData[i][j].src.height > src.rows - 1)
+			{
+				int differH = (src.rows - 1) - (reOrderData[i][j].src.y + reOrderData[i][j].src.height);
+				reOrderData[i][j].src.height += differH;
+				reOrderData[i][j].dst.height += differH;
+			}
+
+			cv::Mat patch;
+			try
+			{
+				patch = dst(reOrderData[i][j].src);
+			}
+			catch (Exception e)
+			{
+				cout << e.err << endl;
+			}
+
+			Rect tempS = reOrderData[i][j].src;
+			Rect tempD = reOrderData[i][j].dst;
+
 			patch.copyTo(target(reOrderData[i][j].dst));
-			//cv::rectangle(target, reOrderData[i][j].dst, cv::Scalar(0, 0, 255));
-
+			cv::rectangle(target, reOrderData[i][j].dst, cv::Scalar(0, 0, 255));
+			//cv::putText(target, std::to_string(indexer), reOrderData[i][j].dst.tl(), 1, 1, cv::Scalar(255, 0, 0));
 			//cv::imshow("target", target);
+			//cv::imshow("Src", dst);
 			//cv::waitKey();
+
 		}
 	}
 
@@ -364,4 +422,95 @@ int main(void)
 	cv::imwrite("dst.jpg", target, compression_params);
 
 	return 0;
+}
+
+Rect findCharSizeFromROI(cv::Mat patch, cv::Rect rect, int x, int y, int cols, int rows, int margin)
+{
+	int minX = 10000000;
+	int minY = 10000000;
+	int maxX = -10000000;
+	int maxY = -10000000;
+
+	for (int m = 0; m < patch.rows; m++)
+	{
+		for (int n = 0; n < patch.cols; n++)
+		{
+			int value = patch.at<unsigned char>(m, n);
+			if (value != 255)
+			{
+				if (maxY < m)
+				{
+					maxY = m;
+				}
+
+				if (maxX < n)
+				{
+					maxX = n;
+				}
+
+				if (minY > m)
+				{
+					minY = m;
+				}
+
+				if (minX > n)
+				{
+					minX = n;
+				}
+			}			
+		}
+	}
+
+	int x1 = x + minX - margin;
+	int x2 = x + maxX + margin;
+	int y1 = y + minY - margin;
+	int y2 = y + maxY + margin;
+
+	checkBoundary(x1, x2, y1, y2, cols, rows);
+
+	Rect patchSize(cv::Point(x1, y1), cv::Point(x2, y2));
+
+	if (minX == 1000000)
+	{
+		patchSize = rect;
+	}
+
+	return patchSize;
+}
+
+void getSplitedROI(vector<Rect> &roi, cv::Mat img, int sizeR, int sizeC, int margin, int rowWeight, int colWeight) // 왜 안됨?
+{
+	for (int i = 0; i < sizeR; i++)
+	{
+		for (int j = 0; j < sizeC; j++)
+		{
+			int x = img.cols / sizeC * j + (j * colWeight);
+			int y = img.rows / sizeR * i + (i * rowWeight);
+			Rect temp(x, y, img.cols / sizeC, img.rows / sizeR);
+			roi.push_back(findCharSizeFromROI(img(temp), temp, x, y, img.cols, img.rows, margin));
+		}
+	}
+}
+
+void checkBoundary(int &x1, int &x2, int &y1, int &y2, int cols, int rows)
+{
+	if (x1 < 0)
+	{
+		x1 = 0;
+	}
+
+	if (y1 < 0)
+	{
+		y1 = 0;
+	}
+
+	if (x2 > cols - 1)
+	{
+		x2 = cols - 1;
+	}
+
+	if (y2 > rows - 1)
+	{
+		y2 = rows - 1;
+	}
 }
