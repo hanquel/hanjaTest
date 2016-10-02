@@ -25,21 +25,62 @@ public:
 	int index;
 };
 
+void sizeOrdering(map<int, vector<PATCH>> src, vector<int> &dst, int startCol, int blanks, int counter) 
+{
+	if (counter == blanks)
+	{
+		return;
+	}
+
+	std::map<int, int> totalSize;
+	for (int i = startCol; i < src.size(); i++)
+	{
+		int total = 0;
+
+		for (int j = 0; j < counter; j++)
+		{
+			total += src[i - 1][src.size() - (counter - j)].dst.height;
+		}
+
+		for (int j = counter; j < src[i].size(); j++)
+		{
+			total += src[i][j].dst.height;
+		}
+		totalSize[i] = total;
+	}
+
+	std::vector<std::pair<int, int>>vec(totalSize.begin(), totalSize.end());
+	std::sort(vec.begin(), vec.end(), compare_pair_second<std::greater>());
+
+	vector<int> selete32;
+	for (int i = 0; i < (blanks - counter) * 2; i++)
+	{
+		selete32.push_back(vec[i].first);
+	}
+
+	std::sort(selete32.begin(), selete32.end());
+
+	
+	for (int i = 0; i < (blanks - counter) * 2; i += 2)
+	{
+		dst.push_back(selete32[i]);
+	}
+
+	std::sort(dst.begin(), dst.end());
+}
+
 int main(void)
 {
+	int totalBlanks = 6;
+	int wantBlanks = 5;
+	int blackSize = 130;
 	cv::Mat src = cv::imread("1.jpg", IMREAD_GRAYSCALE);
 	cv::Mat dst = cv::imread("1.jpg");
 
 	cv::threshold(src, src, 126, 255, CV_THRESH_BINARY);
 
 	float mCols = 1.5f;
-	cv::Mat target = cv::Mat::zeros(src.rows, src.cols * mCols, dst.type());
-	target = cv::Scalar(255, 255, 255);
 
-	//float divide = 7;
-
-	//cv::resize(src, src, cv::Size(src.cols / divide, src.rows / divide));
-	//cv::resize(dst, dst, cv::Size(dst.cols / divide, dst.rows / divide));
 
 	int sizeR = 33;
 	int sizeC = 28;
@@ -47,10 +88,8 @@ int main(void)
 
 	float colAddWeight = 0;
 	float rowAddWeight = 0;
-	//float rowAddWeight = 0.26;
 
 	vector<Rect> roi;
-
 
 	int blank = 10000000;
 	int width = src.cols / sizeC;
@@ -173,7 +212,6 @@ int main(void)
 	}
 
 	counter = 0;
-	std::map<int, int> totalSize;
 	map<int, vector<PATCH>> orderedPatch;
 
 	for (int i = 0; i < order.size(); i++)
@@ -181,32 +219,23 @@ int main(void)
 		int total = 0;
 		for (int j = 0; j < order[i].size(); j++)
 		{
-			//if (order[i][j].width == (src.cols / sizeC) &&
-			//	order[i][j].height == (src.rows / sizeR))
 			if (order[i][j].width == blank &&
 				order[i][j].height == blank)
 			{
 				// 178 * 156
 				//order[i][j].width = 178;
 				//order[i][j].height = 156;
-				order[i][j].width = 130;
-				order[i][j].height = 130;
+				order[i][j].width = blackSize;
+				order[i][j].height = blackSize;
 
 			}
 			total += order[i][j].height;
 		}
 
-		totalSize[i] = total;
 		total /= order[i].size();
 
 		for (int j = 0; j < order[i].size(); j++)
 		{
-			//int top = order[i][j].y;
-			//int bottom = order[i][j].y + order[i][j].height;
-			//int center = (top + bottom) / 2;
-
-			//order[i][j].y = center - (order[i][j].height / 2);
-
 			if (order[i][j].height < 100)
 			{
 				int top = order[i][j].y;
@@ -227,36 +256,27 @@ int main(void)
 		}
 	}
 
-	std::vector<std::pair<int, int>>vec(totalSize.begin(), totalSize.end());
-	std::sort(vec.begin(), vec.end(), compare_pair_second<std::greater>());
-
-	vector<int> tselete32;
-	for (int i = 0; i < 12; i++)
-	{
-		tselete32.push_back(vec[i].first);
-	}
-
-	std::sort(tselete32.begin(), tselete32.end());
-
-	vector<int> selete32;
-	for (int i = 0; i < 12; i += 2)
-	{
-		selete32.push_back(tselete32[i]);
-	}
-
-	std::sort(selete32.begin(), selete32.end());
-
 	counter = 0;
-
-	// TODO: 첫칸이 빈칸이고 32자인 경우가 있는지 확인 필요함
-	// TODO: 32칸 정렬 작업 필요
-
+	vector<int> changedIdx;
 	map<int, vector<PATCH>> reOrderData;
 	for (int i = 0; i < orderedPatch.size(); i++)
 	{
+		vector<int> selete32;
+		sizeOrdering(orderedPatch, selete32, i, wantBlanks, counter);
 		int preHeight = 0;
+		bool isBlank = false;
 		for (int j = 0; j < counter; j++)
 		{
+			if (j == 0) // 첫 칸이 빈칸일 때
+			{
+				if (orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].dst.height == blackSize &&
+					orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].dst.width == blackSize)
+				{
+					isBlank = true;
+					continue;
+				}
+			}
+
 			preHeight = orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].dst.height * j;
 			Rect tOrderRect = Rect(
 				orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].dst.x - (src.cols / sizeC),
@@ -273,7 +293,7 @@ int main(void)
 		}
 
 		vector<int>::iterator it = std::find(selete32.begin(), selete32.end(), i);
-		if (it != selete32.end()) // 선택된것중 하나면
+		if (it != selete32.end() && !isBlank) // 선택된것중 하나면서 빈칸이 아니면
 		{
 			for (int j = 0; j < orderedPatch[i].size() - counter; j++)
 			{
@@ -295,22 +315,43 @@ int main(void)
 				reOrderData[i].push_back(t);
 			}
 			counter++;
+			changedIdx.push_back(i);
 		}
-		else
+		else // 33칸
 		{
-			for (int j = 0; j < orderedPatch[i].size() - counter; j++)
+			if (i == orderedPatch.size() - 1) // last line
 			{
-				int yH = orderedPatch[i][j].dst.height * j + preHeight;
-				Rect tOrderRect = Rect(
-					orderedPatch[i][j].dst.x,
-					yH,
-					orderedPatch[i][j].dst.width,
-					orderedPatch[i][j].dst.height);
+				for (int j = 0; j < orderedPatch[i].size() - counter - (totalBlanks - wantBlanks); j++)
+				{
+					int yH = orderedPatch[i][j].dst.height * j + preHeight;
+					Rect tOrderRect = Rect(
+						orderedPatch[i][j].dst.x,
+						yH,
+						orderedPatch[i][j].dst.width,
+						orderedPatch[i][j].dst.height);
 
-				PATCH t;
-				t.src = orderedPatch[i][j].src;
-				t.dst = tOrderRect;
-				reOrderData[i].push_back(t);
+					PATCH t;
+					t.src = orderedPatch[i][j].src;
+					t.dst = tOrderRect;
+					reOrderData[i].push_back(t);
+				}
+			}
+			else
+			{
+				for (int j = 0; j < orderedPatch[i].size() - counter; j++)
+				{
+					int yH = orderedPatch[i][j].dst.height * j + preHeight;
+					Rect tOrderRect = Rect(
+						orderedPatch[i][j].dst.x,
+						yH,
+						orderedPatch[i][j].dst.width,
+						orderedPatch[i][j].dst.height);
+
+					PATCH t;
+					t.src = orderedPatch[i][j].src;
+					t.dst = tOrderRect;
+					reOrderData[i].push_back(t);
+				}
 			}
 		}
 	}
@@ -319,42 +360,57 @@ int main(void)
 	float limit = 4815;
 	counter = 0;
 
+	cv::Mat target = cv::Mat::zeros(4815 + 350, src.cols * mCols, dst.type());
+	target = cv::Scalar(255, 255, 255);
+
 	for (int i = 0; i < reOrderData.size(); i++)
 	{
 		indexer = 0;
 		int differ = limit / (float)reOrderData[i].size();
 		for (int j = 0; j < reOrderData[i].size(); j++)
 		{
-			//int top = differ * j;
-			//int bottom = (differ * j) + order[i][j].height;
-			//int center = (top + bottom) / 2;
-
 			int h = reOrderData[i][j].dst.height;
-			int marginTop = (differ - h) / 2;
 
-			////reOrderData[i][j].dst.y = (p / 2) + (differ * j);
+			// TODO 큰 글자 간엔		= 비교적 넓게 
+			// 큰 - 작, 작 - 큰 은	= 중간
+			// 작 - 작 은	=	좁게
+
+			//if (h < 120)
+			//{
+			//	h += 15;
+			//}
+			//else
+			//{
+			//	h -= 15;
+			//}
+
+			int marginTop = (differ - h);// / 2;
+
 			reOrderData[i][j].dst.y = (differ * j) + marginTop;
 			if (reOrderData[i][j].dst.y < 0)
 			{
 				reOrderData[i][j].dst.y = 0;
 			}
 
-			reOrderData[i][j].dst.x = (reOrderData[i][j].dst.x * mCols);
+			reOrderData[i][j].dst.x = (reOrderData[i][j].dst.x * mCols) + (reOrderData[i][j].dst.width / 4);
 
 			cv::Mat patch = dst(reOrderData[i][j].src);
 			patch.copyTo(target(reOrderData[i][j].dst));
+			cv::rectangle(target, reOrderData[i][j].dst, cv::Scalar(0, 0, 255), 1);
+		}
 
+		vector<int>::iterator it = std::find(changedIdx.begin(), changedIdx.end(), i);
+		if (it != changedIdx.end())
+		{
+			Rect checkChanged = Rect(
+				reOrderData[i][reOrderData[i].size() - 1].dst.x,
+				reOrderData[i][reOrderData[i].size() - 1].dst.y + 300,
+				reOrderData[i][reOrderData[i].size() - 1].dst.width,
+				reOrderData[i][reOrderData[i].size() - 1].dst.height);
+			cv::rectangle(target, checkChanged, cv::Scalar(0, 0, 255), 50);
 			//cv::putText(target, to_string(indexer++), orderedPatch[i][j].dst.tl(), 1, 0.5, cv::Scalar(0, 255, 0));
-			//cv::rectangle(target, reOrderData[i][j].dst, cv::Scalar(0, 0, 255));
 		}
 	}
-
-	//Rect endLine = Rect(cv::Point(0, 4800), cv::Point(src.cols - 1, src.rows - 1));
-	//cv::rectangle(target, endLine, cv::Scalar(0, 0, 255));
-
- 	cv::imshow("target", target);
-	cv::imshow("Src", dst);
-	cv::waitKey();
 
 	vector<int> compression_params;
 	compression_params.push_back(IMWRITE_JPEG_QUALITY);
