@@ -357,7 +357,7 @@ int main(void)
 	}
 
 	// 5650 * 4815
-	float limit = 4815;
+	float limit = 4800;
 	counter = 0;
 
 	cv::Mat target = cv::Mat::zeros(4815 + 350, src.cols * mCols, dst.type());
@@ -365,8 +365,17 @@ int main(void)
 
 	for (int i = 0; i < reOrderData.size(); i++)
 	{
+		int total = 0;
+		for (int j = 0; j < reOrderData[i].size(); j++)
+		{
+			total += reOrderData[i][j].dst.height;
+		}
+
 		indexer = 0;
-		int differ = limit / (float)reOrderData[i].size();
+		int differ = (limit - total) / ((float)reOrderData[i].size() - 1);
+
+		int yH = 0;
+
 		for (int j = 0; j < reOrderData[i].size(); j++)
 		{
 			int h = reOrderData[i][j].dst.height;
@@ -384,15 +393,11 @@ int main(void)
 			//	h -= 15;
 			//}
 
-			int marginTop = (differ - h);// / 2;
+			reOrderData[i][j].dst.y = yH;
+			yH += reOrderData[i][j].dst.height + differ;
 
-			reOrderData[i][j].dst.y = (differ * j) + marginTop;
-			if (reOrderData[i][j].dst.y < 0)
-			{
-				reOrderData[i][j].dst.y = 0;
-			}
 
-			reOrderData[i][j].dst.x = (reOrderData[i][j].dst.x * mCols) + (reOrderData[i][j].dst.width / 4);
+			reOrderData[i][j].dst.x = (reOrderData[i][j].dst.x * mCols) + (reOrderData[i][j].dst.width / 3);
 
 			cv::Mat patch = dst(reOrderData[i][j].src);
 			patch.copyTo(target(reOrderData[i][j].dst));
