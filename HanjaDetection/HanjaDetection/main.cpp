@@ -73,7 +73,7 @@ int main(void)
 {
 	int totalBlanks = 6;
 	int wantBlanks = 5;
-	int blackSize = 130;
+	int blackSize = 150;
 	cv::Mat src = cv::imread("1.jpg", IMREAD_GRAYSCALE);
 	cv::Mat dst = cv::imread("1.jpg");
 
@@ -109,6 +109,13 @@ int main(void)
 			}
 
 			Rect temp(x, y, width, c);
+
+			//int top = y; 
+			//int bottom = y + c;
+			//int left = x;
+			//int right = x + width;
+			//int centerX = (left + right) / 2;
+			//int centery = (top + bottom) / 2;
 
 			int minX = blank;
 			int minY = blank;
@@ -233,10 +240,11 @@ int main(void)
 		}
 
 		total /= order[i].size();
+		total /= 1.5f;
 
 		for (int j = 0; j < order[i].size(); j++)
 		{
-			if (order[i][j].height < 100)
+			if (order[i][j].height < 50)
 			{
 				int top = order[i][j].y;
 				int bottom = order[i][j].y + order[i][j].height;
@@ -360,9 +368,11 @@ int main(void)
 	float limit = 4800;
 	counter = 0;
 
-	cv::Mat target = cv::Mat::zeros(4815 + 350, src.cols * mCols, dst.type());
+	cv::Mat target = cv::Mat::zeros(4815 + 350, src.cols * mCols + 300, dst.type());
 	target = cv::Scalar(255, 255, 255);
 
+	width = (src.cols * mCols) / sizeC;;
+	int invers = reOrderData.size();
 	for (int i = 0; i < reOrderData.size(); i++)
 	{
 		int total = 0;
@@ -371,10 +381,11 @@ int main(void)
 			total += reOrderData[i][j].dst.height;
 		}
 
+		invers--;
 		indexer = 0;
-		int differ = (limit - total) / ((float)reOrderData[i].size() - 1);
+		int differ = (limit - total) / ((float)reOrderData[i].size());
 
-		int yH = 0;
+		int yH = differ;
 
 		for (int j = 0; j < reOrderData[i].size(); j++)
 		{
@@ -397,7 +408,17 @@ int main(void)
 			yH += reOrderData[i][j].dst.height + differ;
 
 
-			reOrderData[i][j].dst.x = (reOrderData[i][j].dst.x * mCols) + (reOrderData[i][j].dst.width / 3);
+			//reOrderData[i][j].dst.x = (reOrderData[i][j].dst.x * mCols) +(reOrderData[i][j].dst.width / 3);
+
+			int left = reOrderData[i][j].dst.x;
+			int right = reOrderData[i][j].dst.x + reOrderData[i][j].dst.width;
+			int center = (left + right) / 2;
+
+			int dif = center - left;
+			int mar = width - dif;
+			reOrderData[i][j].dst.x = ((width * invers) + mar);
+
+			//width
 
 			cv::Mat patch = dst(reOrderData[i][j].src);
 			patch.copyTo(target(reOrderData[i][j].dst));
