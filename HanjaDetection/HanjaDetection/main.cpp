@@ -71,8 +71,8 @@ void sizeOrdering(map<int, vector<PATCH>> src, vector<int> &dst, int startCol, i
 
 int main(void)
 {
-	int totalBlanks = 6;
-	int wantBlanks = 5;
+	int totalBlanks = 3;
+	int wantBlanks = 2;
 	int blackSize = 150;
 	cv::Mat src = cv::imread("1.jpg", IMREAD_GRAYSCALE);
 	cv::Mat dst = cv::imread("1.jpg");
@@ -422,20 +422,21 @@ int main(void)
 
 			cv::Mat patch = dst(reOrderData[i][j].src);
 			patch.copyTo(target(reOrderData[i][j].dst));
-			cv::rectangle(target, reOrderData[i][j].dst, cv::Scalar(0, 0, 255), 1);
+			//cv::rectangle(target, reOrderData[i][j].dst, cv::Scalar(0, 0, 255), 1);
 		}
 
 		vector<int>::iterator it = std::find(changedIdx.begin(), changedIdx.end(), i);
+		Rect checkChanged = Rect(
+			reOrderData[i][reOrderData[i].size() - 1].dst.x,
+			reOrderData[i][reOrderData[i].size() - 1].dst.y + 300,
+			reOrderData[i][reOrderData[i].size() - 1].dst.width,
+			reOrderData[i][reOrderData[i].size() - 1].dst.height);
+
 		if (it != changedIdx.end())
 		{
-			Rect checkChanged = Rect(
-				reOrderData[i][reOrderData[i].size() - 1].dst.x,
-				reOrderData[i][reOrderData[i].size() - 1].dst.y + 300,
-				reOrderData[i][reOrderData[i].size() - 1].dst.width,
-				reOrderData[i][reOrderData[i].size() - 1].dst.height);
 			cv::rectangle(target, checkChanged, cv::Scalar(0, 0, 255), 50);
-			//cv::putText(target, to_string(indexer++), orderedPatch[i][j].dst.tl(), 1, 0.5, cv::Scalar(0, 255, 0));
 		}
+		cv::putText(target, to_string(reOrderData[i].size()), checkChanged.br(), 1, 7, cv::Scalar(255, 0, 0), 2);
 	}
 
 	vector<int> compression_params;
