@@ -72,7 +72,7 @@ void sizeOrdering(map<int, vector<PATCH>> src, vector<int> &dst, int startCol, i
 int main(void)
 {
 	int totalBlanks = 3;
-	int wantBlanks = 2;
+	int wantBlanks = 3;
 	int blackSize = 150;
 	cv::Mat src = cv::imread("1.jpg", IMREAD_GRAYSCALE);
 	cv::Mat dst = cv::imread("1.jpg");
