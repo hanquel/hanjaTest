@@ -9,6 +9,9 @@
 using namespace std;
 using namespace cv;
 
+int totalBlanks = 6;
+int wantBlanks = 5;
+
 template<template<typename>class P = std::greater> struct compare_pair_second {
 	template<class T1, class T2> bool operator()(const std::pair<T1, T2>&left, const std::pair<T1, T2>&right) {
 		return P<T2>()(left.second, right.second);
@@ -71,8 +74,7 @@ void sizeOrdering(map<int, vector<PATCH>> src, vector<int> &dst, int startCol, i
 
 int main(void)
 {
-	int totalBlanks = 3;
-	int wantBlanks = 3;
+
 	int blackSize = 150;
 	cv::Mat src = cv::imread("1.jpg", IMREAD_GRAYSCALE);
 	cv::Mat dst = cv::imread("1.jpg");
@@ -90,6 +92,7 @@ int main(void)
 	float rowAddWeight = 0;
 
 	vector<Rect> roi;
+	vector<bool> grayList;
 
 	int blank = 10000000;
 	int width = src.cols / sizeC;
@@ -99,6 +102,7 @@ int main(void)
 	{
 		for (int j = 0; j < sizeC; j++)
 		{
+			bool bGray = false;
 			int x = width * j + (j * colAddWeight);
 			int y = height * i + (i * rowAddWeight);
 
@@ -189,10 +193,11 @@ int main(void)
 					patch.at<cv::Vec3b>(1, 1)[1] != 255 ||
 					patch.at<cv::Vec3b>(2, 1)[1] != 255)
 				{
+					bGray = true;
 					patchSize = Rect(x, y, blank, blank);
 				}
 			}
-
+			grayList.push_back(bGray);
 			roi.push_back(patchSize);
 		}
 	}
@@ -200,6 +205,7 @@ int main(void)
 	int counter = 0;
 	int indexer = 0;
 	map<int, vector<Rect>> order;
+	map<int, vector<bool>> orderGrayList;
 
 	for (int i = sizeC - 1; i > -1; i--)
 	{
@@ -212,6 +218,7 @@ int main(void)
 				counter++;
 			}
 
+			orderGrayList[counter].push_back(grayList[index]);
 			order[counter].push_back(roi[index]);
 
 			indexer++;
@@ -234,7 +241,6 @@ int main(void)
 				//order[i][j].height = 156;
 				order[i][j].width = blackSize;
 				order[i][j].height = blackSize;
-
 			}
 			total += order[i][j].height;
 		}
@@ -257,7 +263,7 @@ int main(void)
 			PATCH tPatch;
 			tPatch.src = order[i][j];
 			tPatch.dst = order[i][j];
-			tPatch.alive = true; 
+			tPatch.alive = orderGrayList[i][j];
 			tPatch.index = counter++;
 
 			orderedPatch[i].push_back(tPatch);
@@ -275,10 +281,11 @@ int main(void)
 		bool isBlank = false;
 		for (int j = 0; j < counter; j++)
 		{
-			if (j == 0) // 첫 칸이 빈칸일 때
+			if (j == 0) // 첫 칸이 빈칸일 때 TODO: 회색인경우 파악 필요
 			{
 				if (orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].dst.height == blackSize &&
-					orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].dst.width == blackSize)
+					orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].dst.width == blackSize &&
+					orderedPatch[i - 1][orderedPatch[i - 1].size() - (counter - j)].alive == false)
 				{
 					isBlank = true;
 					continue;
@@ -436,7 +443,7 @@ int main(void)
 		{
 			cv::rectangle(target, checkChanged, cv::Scalar(0, 0, 255), 50);
 		}
-		cv::putText(target, to_string(reOrderData[i].size()), checkChanged.br(), 1, 7, cv::Scalar(255, 0, 0), 2);
+		cv::putText(target, to_string(reOrderData[i].size()), checkChanged.tl(), 1, 7, cv::Scalar(255, 0, 0), 2);
 	}
 
 	vector<int> compression_params;
