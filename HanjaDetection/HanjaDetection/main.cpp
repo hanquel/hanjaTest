@@ -9,8 +9,8 @@
 using namespace std;
 using namespace cv;
 
-int totalBlanks = 6;
-int wantBlanks = 5;
+int totalBlanks = 17;
+int wantBlanks = totalBlanks;
 
 template<template<typename>class P = std::greater> struct compare_pair_second {
 	template<class T1, class T2> bool operator()(const std::pair<T1, T2>&left, const std::pair<T1, T2>&right) {
@@ -58,6 +58,11 @@ void sizeOrdering(map<int, vector<PATCH>> src, vector<int> &dst, int startCol, i
 	vector<int> selete32;
 	for (int i = 0; i < (blanks - counter) * 2; i++)
 	{
+		if (i >= vec.size())
+		{
+			break;
+		}
+
 		selete32.push_back(vec[i].first);
 	}
 
@@ -66,6 +71,10 @@ void sizeOrdering(map<int, vector<PATCH>> src, vector<int> &dst, int startCol, i
 	
 	for (int i = 0; i < (blanks - counter) * 2; i += 2)
 	{
+		if (i >= selete32.size())
+		{
+			break;
+		}
 		dst.push_back(selete32[i]);
 	}
 
@@ -82,7 +91,6 @@ int main(void)
 	cv::threshold(src, src, 126, 255, CV_THRESH_BINARY);
 
 	float mCols = 1.5f;
-
 
 	int sizeR = 33;
 	int sizeC = 28;
